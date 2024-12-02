@@ -2,6 +2,9 @@
 
 A Tic-tac-toe (XO) chatbot built using Kenar APIs. Play the classic game against an AI opponent directly in your divar chat!
 
+## Disclaimer
+I created this chatbot for divar kenar APIs demo in only 3 hours, so it don't expect it to be clean and performant.
+
 ## 🎮 Features
 
 - Interactive 3x3 game board with emoji buttons
