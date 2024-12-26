@@ -52,7 +52,7 @@ class ChatbotClient:
         print(payload)
         try:
             response = self.client.post( 
-                f"{self.base_url}/v2/open-platform/chatbot-conversations/{conversation_id}/messages",  # Adjust endpoint as needed
+                f"{self.base_url}/experimental/open-platform/chatbot-conversations/{conversation_id}/messages",  # Adjust endpoint as needed
                 headers=self.headers,
                 json=payload
             )
