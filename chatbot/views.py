@@ -3,7 +3,8 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from xo.models import Game
-from .client import ChatbotClient
+from .models import ConversationQuota
+from .client import ChatbotClient, ClaudeClient
 import json
 import os
 
@@ -51,8 +52,6 @@ class MessageWebhookView(View):
 
             # Validate message structure
             if not self.validate_message_structure(data):
-                print('dasdsad')
-                print(data)
                 return JsonResponse(
                     {'error': 'Invalid message structure'},
                     status=400
@@ -61,9 +60,23 @@ class MessageWebhookView(View):
             # Extract relevant information
             conversation_id = data['new_chatbot_message']['conversation']['id']
             text = data['new_chatbot_message']['text']
+
+            client = ChatbotClient(
+                api_key=os.environ.get('KENAR_API_KEY'),
+            )
             
             # Handle restart command
-            if text.strip().lower().startswith('/restart'):
+            if text.strip().lower().startswith('/hajehsan'):
+                conversation_quota = ConversationQuota.objects.get_or_create(conversation_id=conversation_id)
+                if conversation_quota.get_remaining_quota() == 0:
+                    return HttpResponse(b"", status=429)
+                conversation_quota.increment_quota()
+                ai_client = ClaudeClient(api_key=os.environ.get("ANTROPIC_API_KEY"), base_url=os.environ.get("ANTROPIC_BASE_URL", None))
+                response = ai_client.get_response(text.strip()[len("/hajehsan"):])
+                client.send_message_with_buttons(conversation_id, response, None)
+                return HttpResponse(status=200)
+
+            elif text.strip().lower().startswith('/restart'):
                 # Delete existing game if it exists
                 Game.objects.filter(conversation_id=conversation_id).delete()
                 # Create new game
@@ -78,22 +91,17 @@ class MessageWebhookView(View):
 
 
             # Initialize chatbot client
-            client = ChatbotClient(
-                api_key=os.environ.get('KENAR_API_KEY'),
-            )
 
             # Get game status message
             status_message = "Your turn! Select a position to play: (you can reset with /restart)"
             if game.status == 'X_WON':
-                status_message = "Game Over - You Won! 🎉"
+                status_message = "Game Over - You Won! 🎉\nUse /restart to rest"
             elif game.status == 'O_WON':
                 status_message = "Game Over - Bot Won! 🤖"
             elif game.status == 'DRAW':
                 status_message = "Game Over - It's a Draw! 🤝"
 
             game_button_grid = game.get_button_grid()
-            print("game button grid created")
-            print(game_button_grid)
 
             # Get button grid from game and send message
             try:

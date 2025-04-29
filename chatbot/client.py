@@ -1,6 +1,8 @@
 import httpx
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 import json
+import os
+from anthropic import Anthropic
 
 class ChatbotClient:
     def __init__(self, api_key: str):
@@ -27,7 +29,7 @@ class ChatbotClient:
         self,
         conversation_id: str,
         message: str,
-        buttons_data: List[Dict[str, str]],
+        buttons_data: Optional[List[Dict[str, str]]],
         message_type: str = "TEXT"
     ) -> httpx.Response:
         """
@@ -65,3 +67,70 @@ class ChatbotClient:
     def close(self):
         """Close the HTTP client"""
         self.client.close()
+
+
+class ClaudeClient:
+    def __init__(self, api_key: str, base_url: Optional[str] = None):
+        """
+        Initialize Claude client with API key and optional base URL
+        
+        Args:
+            api_key: Anthropic API key
+            base_url: Optional base URL for API endpoint (default: None, uses Anthropic's default)
+        """
+        self.client = Anthropic(
+            api_key=api_key,
+            base_url=base_url if base_url else "https://api.anthropic.com"
+        )
+        self.model = "claude-3-sonnet-20241022"
+
+    def get_response(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        max_tokens: int = 1000,
+        temperature: float = 0.7
+    ) -> str:
+        """
+        Get a response from Claude API
+        
+        Args:
+            prompt: The user's message/prompt
+            system_prompt: Optional system prompt to set context/behavior
+            max_tokens: Maximum tokens in response (default: 1000)
+            temperature: Response randomness (0-1, default: 0.7)
+            
+        Returns:
+            str: Claude's response text
+        """
+        try:
+            messages = []
+            
+            # Add system prompt if provided
+            if system_prompt:
+                messages.append({
+                    "role": "system",
+                    "content": system_prompt
+                })
+            
+            # Add user message
+            messages.append({
+                "role": "user",
+                "content": prompt
+            })
+
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                messages=messages
+            )
+
+            return response.content[0].text
+
+        except Exception as e:
+            raise Exception(f"Failed to get Claude response: {str(e)}")
+
+    def close(self):
+        """Clean up resources if needed"""
+        pass  # Anthropic client doesn't need explicit cleanup
